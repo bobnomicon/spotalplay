@@ -9,11 +9,13 @@ interface Envs {
   spotifyClientId: string;
   spotifyClientSecret: string;
   spotifyRedirectUri: string;
+  spotifyScope: string;
 }
 
 interface AccessToken {
   access_token: string;
   token_type: string;
+  scope: string;
   expires_in: number;
 }
 
@@ -44,7 +46,8 @@ function getEnvs() {
     spotifyApiUrl: process.env.SPOTIFY_API_URL ?? '',
     spotifyClientId: process.env.SPOTIFY_CLIENT_ID ?? '',
     spotifyClientSecret: process.env.SPOTIFY_CLIENT_SECRET ?? '',
-    spotifyRedirectUri: process.env.SPOTIFY_REDIRECT_URI ?? ''
+    spotifyRedirectUri: process.env.SPOTIFY_REDIRECT_URI ?? '',
+    spotifyScope: process.env.SPOTIFY_SCOPE ?? ''
   };
 
   let missingEnv = false;
@@ -68,10 +71,10 @@ const login: string = async () => {
     response_type: 'code',
     redirect_uri: `${envs.spotifyRedirectUri}/callback`,
     state: generateRandomString(16),
-    scope: 'user-library-read'
+    scope: envs.spotifyScope
   });
 
-  await fetch(`${envs.spotifyAccountsUrl}/authorize?${queryParams}`)
+  return await fetch(`${envs.spotifyAccountsUrl}/authorize?${queryParams}`)
     .then(async response => {
       if (!response.ok) {
         throw new Error(`Error requesting user authorization: ${response.status} ${response.statusText}`);
@@ -86,14 +89,17 @@ const login: string = async () => {
 
       let code = '';
       const fetchAuthorizationCode = async () => {
-        return new Promise<void>(async (resolve, reject) => {
+        return new Promise<void>(async resolve => {
           setTimeout(async () => {
             console.log('Attempting to fetch authorization code from callback URL...');
+
             const data = await fetch(`${envs.spotifyRedirectUri}/code`).then(response => response.json());
+              
             if (data.code) {
               code = data.code;
-              resolve();
             }
+
+            resolve();
           }, 3000);
         });
       };
@@ -108,16 +114,18 @@ const login: string = async () => {
         throw new Error('Failed to fetch authorization code after maximum attempts.');
       }
 
+      console.log('Authorization code obtained.');
       return code;
     })
     .catch(error => console.error('Error requesting user authorization:', error));
 };
 
 /**
- * Gets an access token from the Spotify Accounts service
+ * Gets an access token from the Spotify Accounts service.
  */
-const getAccessToken = async () => {
-  const credentials = new Buffer.from(`${envs.spotifyClientId}:${envs.spotifyClientSecret}`).toString('base64');
+const getAccessToken = async (authorizationCode: string) => {
+  const credentials = (new Buffer.from(`${envs.spotifyClientId}:${envs.spotifyClientSecret}`).toString('base64'));
+
   const data: AccessToken = await fetch(`${envs.spotifyAccountsUrl}/api/token`, {
     method: 'POST',
     headers: {
@@ -125,7 +133,9 @@ const getAccessToken = async () => {
       'Authorization': `Basic ${credentials}`
     },
     body: new URLSearchParams({
-      grant_type: 'client_credentials'
+      grant_type: 'authorization_code',
+      code: authorizationCode,
+      redirect_uri: `${envs.spotifyRedirectUri}/callback`
     })
   })
     .then(response => {
@@ -133,6 +143,7 @@ const getAccessToken = async () => {
         throw new Error(`Error fetching access token: ${response.status} ${response.statusText}`);
       }
 
+      console.log('Access token obtained.');
       return response.json();
     })
     .catch(error => console.error('Error fetching access token:', error));
@@ -168,14 +179,13 @@ const main = async () => {
 
   // Request user authorization from Spotify
   const authorizationCode = await login();
-
-  // Get Spotify access token
-  const spotifyAcessToken = (await getAccessToken())?.access_token ?? '';
-  if (spotifyAcessToken) {
-    console.log('Fetched Spotify access token.');
-
-    // Get user's albums
-    const albums = await getAlbums(spotifyAcessToken);
+  if (authorizationCode) {
+    // Get Spotify access token
+    const accessToken = (await getAccessToken(authorizationCode))?.access_token ?? '';
+    if (accessToken) {
+      // Get user's albums
+      const albums = await getAlbums(accessToken);
+    }
   }
 };
 
