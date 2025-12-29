@@ -1,9 +1,15 @@
 import 'dotenv/config';
+import { spawn } from 'node:child_process';
 
-const spotifyAccountsUrl = process.env.SPOTIFY_ACCOUNTS_URL;
-const spotifyApiUrl = process.env.SPOTIFY_API_URL;
-const spotifyClientId = process.env.SPOTIFY_CLIENT_ID;
-const spotifyClientSecret = process.env.SPOTIFY_CLIENT_SECRET;
+import { generateRandomString } from './utils';
+
+interface Envs {
+  spotifyAccountsUrl: string;
+  spotifyApiUrl: string;
+  spotifyClientId: string;
+  spotifyClientSecret: string;
+  spotifyRedirectUri: string;
+}
 
 interface AccessToken {
   access_token: string;
@@ -26,50 +32,152 @@ interface Album {
   items: AlbumItem[]
 }
 
+let envs: Envs;
+
+/**
+ * Retrieves the required Spotify environment variables and ensures they are all defined.
+ * If any required environment variable is missing, the process will exit with an error.
+ */
+function getEnvs() {
+  envs = {
+    spotifyAccountsUrl: process.env.SPOTIFY_ACCOUNTS_URL ?? '',
+    spotifyApiUrl: process.env.SPOTIFY_API_URL ?? '',
+    spotifyClientId: process.env.SPOTIFY_CLIENT_ID ?? '',
+    spotifyClientSecret: process.env.SPOTIFY_CLIENT_SECRET ?? '',
+    spotifyRedirectUri: process.env.SPOTIFY_REDIRECT_URI ?? ''
+  };
+
+  let missingEnv = false;
+  for (const [key, value] of Object.entries(envs)) {
+    if (!value) {
+      console.error(`Missing required Spotify environment variable: ${key}`);
+      missingEnv = true;
+    }
+  }
+  if (missingEnv) {
+    process.exit(1);
+  }
+}
+
+/**
+ * Request user authorization from Spotify. Returns authorization code on success.
+ */
+const login: string = async () => {
+  const queryParams = new URLSearchParams({
+    client_id: envs.spotifyClientId,
+    response_type: 'code',
+    redirect_uri: `${envs.spotifyRedirectUri}/callback`,
+    state: generateRandomString(16),
+    scope: 'user-library-read'
+  });
+
+  await fetch(`${envs.spotifyAccountsUrl}/authorize?${queryParams}`)
+    .then(async response => {
+      if (!response.ok) {
+        throw new Error(`Error requesting user authorization: ${response.status} ${response.statusText}`);
+      }
+
+      // Open the authorization URL in the user's browser
+      // console.log('Opening authorization URL in browser:', response.url);
+      const start = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open';
+      const open = spawn(start, [response.url]);
+
+      console.log('Authorization URL opened in browser. Please complete the authorization process.');
+
+      let code = '';
+      const fetchAuthorizationCode = async () => {
+        return new Promise<void>(async (resolve, reject) => {
+          setTimeout(async () => {
+            console.log('Attempting to fetch authorization code from callback URL...');
+            const data = await fetch(`${envs.spotifyRedirectUri}/code`).then(response => response.json());
+            if (data.code) {
+              code = data.code;
+              resolve();
+            }
+          }, 3000);
+        });
+      };
+
+      let maxAttempts = 10;
+      while(!code && maxAttempts > 0) {
+        await fetchAuthorizationCode();
+        maxAttempts--;
+      }
+
+      if (!code) {
+        throw new Error('Failed to fetch authorization code after maximum attempts.');
+      }
+
+      return code;
+    })
+    .catch(error => console.error('Error requesting user authorization:', error));
+};
+
 /**
  * Gets an access token from the Spotify Accounts service
  */
 const getAccessToken = async () => {
-  const response: AccessToken = await fetch(`${spotifyAccountsUrl}/api/token`, {
+  const credentials = new Buffer.from(`${envs.spotifyClientId}:${envs.spotifyClientSecret}`).toString('base64');
+  const data: AccessToken = await fetch(`${envs.spotifyAccountsUrl}/api/token`, {
     method: 'POST',
     headers: {
-      'Content-Type': 'application/x-www-form-urlencoded'
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Authorization': `Basic ${credentials}`
     },
     body: new URLSearchParams({
-      grant_type: 'client_credentials',
-      client_id: spotifyClientId,
-      client_secret: spotifyClientSecret
+      grant_type: 'client_credentials'
     })
   })
-    .then(response => response.json())
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`Error fetching access token: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    })
     .catch(error => console.error('Error fetching access token:', error));
 
-  return response;
-}
+  return data;
+};
 
 const getAlbums = async (spotifyAccessToken: string) => {
-  const albums: Album[] = await fetch(`${spotifyApiUrl}/me/albums`, {
+  const data: Album[] = await fetch(`${envs.spotifyApiUrl}/me/albums`, {
     method: 'GET',
     headers: {
-      'Authorization': `Bearer ${spotifyAccessToken}`
+      'Authorization': `Bearer ${envs.spotifyAccessToken}`
     }
   })
-    .then(response => response.json())
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`Error fetching albums: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    })
     .catch(error => console.error('Error fetching albums:', error));
 
-  return albums;
-}
+  return data;
+};
 
 /**
  * The main function of the app
  */
 const main = async () => {
+  // Get environment variables
+  getEnvs();
+
+  // Request user authorization from Spotify
+  const authorizationCode = await login();
+
+  // Get Spotify access token
   const spotifyAcessToken = (await getAccessToken())?.access_token ?? '';
   if (spotifyAcessToken) {
+    console.log('Fetched Spotify access token.');
+
+    // Get user's albums
     const albums = await getAlbums(spotifyAcessToken);
-    console.log(albums);
   }
-}
+};
 
 // Run the app on execution
 main();
