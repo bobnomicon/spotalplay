@@ -4,10 +4,10 @@ import { spawn } from 'node:child_process';
 import { generateRandomString } from './utils';
 
 interface Envs {
-  spotifyAccountsUrl: string;
-  spotifyApiUrl: string;
   spotifyClientId: string;
   spotifyClientSecret: string;
+  spotifyAccountsUrl: string;
+  spotifyApiUrl: string;
   spotifyRedirectUri: string;
   spotifyScope: string;
 }
@@ -17,6 +17,7 @@ interface AccessToken {
   token_type: string;
   scope: string;
   expires_in: number;
+  refresh_token: string;
 }
 
 interface AlbumItem {
@@ -42,10 +43,10 @@ let envs: Envs;
  */
 function getEnvs() {
   envs = {
-    spotifyAccountsUrl: process.env.SPOTIFY_ACCOUNTS_URL ?? '',
-    spotifyApiUrl: process.env.SPOTIFY_API_URL ?? '',
     spotifyClientId: process.env.SPOTIFY_CLIENT_ID ?? '',
     spotifyClientSecret: process.env.SPOTIFY_CLIENT_SECRET ?? '',
+    spotifyAccountsUrl: process.env.SPOTIFY_ACCOUNTS_URL ?? '',
+    spotifyApiUrl: process.env.SPOTIFY_API_URL ?? '',
     spotifyRedirectUri: process.env.SPOTIFY_REDIRECT_URI ?? '',
     spotifyScope: process.env.SPOTIFY_SCOPE ?? ''
   };
@@ -81,7 +82,6 @@ const login: string = async () => {
       }
 
       // Open the authorization URL in the user's browser
-      // console.log('Opening authorization URL in browser:', response.url);
       const start = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open';
       const open = spawn(start, [response.url]);
 
@@ -143,11 +143,11 @@ const getAccessToken = async (authorizationCode: string) => {
         throw new Error(`Error fetching access token: ${response.status} ${response.statusText}`);
       }
 
-      console.log('Access token obtained.');
       return response.json();
     })
     .catch(error => console.error('Error fetching access token:', error));
 
+  console.log('Access token obtained.');
   return data;
 };
 
@@ -171,7 +171,7 @@ const getAlbums = async (spotifyAccessToken: string) => {
 };
 
 /**
- * The main function of the app
+ * The main function of the app.
  */
 const main = async () => {
   // Get environment variables
