@@ -17,20 +17,42 @@ interface AccessToken {
   token_type: string;
   scope: string;
   expires_in: number;
-  refresh_token: string;
+  refresh_token?: string;
+}
+
+interface TrackItem {
+  href: string;
+  id: string;
+  name: string;
+  track_number: number;
+  uri: string;
 }
 
 interface AlbumItem {
-  id: string;
-  total_tracks: number;
-  uri: string;
+  added_at: string;
+  album: {
+    total_tracks: number;
+    href: string;
+    id: string;
+    name: string;
+    uri: string;
+    tracks: {
+      href: string;
+      limit: number;
+      next?: string;
+      offset: number;
+      previous?: string;
+      total: number;
+      items: TrackItem[]
+    }
+  }
 }
 
 interface Album {
   limit: number;
-  next: string | null;
+  next?: string;
   offset: number;
-  previous: string | null;
+  previous?: string;
   total: number;
   items: AlbumItem[]
 }
@@ -116,8 +138,7 @@ const login: string = async () => {
 
       console.log('Authorization code obtained.');
       return code;
-    })
-    .catch(error => console.error('Error requesting user authorization:', error));
+    });
 };
 
 /**
@@ -144,18 +165,59 @@ const getAccessToken = async (authorizationCode: string) => {
       }
 
       return response.json();
-    })
-    .catch(error => console.error('Error fetching access token:', error));
+    });
 
   console.log('Access token obtained.');
   return data;
 };
 
-const getAlbums = async (spotifyAccessToken: string) => {
-  const data: Album[] = await fetch(`${envs.spotifyApiUrl}/me/albums`, {
+/**
+ * Refresh access token from the Spotify Accounts service.
+ */
+const refreshAccessToken = async (refreshToken: string) => {
+  const credentials = (new Buffer.from(`${envs.spotifyClientId}:${envs.spotifyClientSecret}`).toString('base64'));
+
+  const data: AccessToken = await fetch(`${envs.spotifyAccountsUrl}/api/token`, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/x-www-form-urlencoded',
+      'Authorization': `Basic ${credentials}`
+    },
+    body: new URLSearchParams({
+      grant_type: 'refresh_token',
+      refresh_token: refreshToken,
+      client_id: envs.spotifyClientId
+    })
+  })
+    .then(response => {
+      if (!response.ok) {
+        throw new Error(`Error fetching refresh access token: ${response.status} ${response.statusText}`);
+      }
+
+      return response.json();
+    });
+
+  console.log('Refresh access token obtained.');
+  return data;
+};
+
+/**
+ * Get user's saved albums from Spotify.
+ * @param spotifyAccessToken Spotify access token
+ * @param offset 
+ * @param limit 
+ * @returns 
+ */
+const getUserAlbums = async (spotifyAccessToken: string, offset: number = 0, limit: number = 50) => {
+  const queryParams = new URLSearchParams({
+    limit: limit.toString(),
+    offset: offset.toString()
+  });
+
+  const data: Album[] = await fetch(`${envs.spotifyApiUrl}/me/albums?${queryParams}`, {
     method: 'GET',
     headers: {
-      'Authorization': `Bearer ${envs.spotifyAccessToken}`
+      'Authorization': `Bearer ${spotifyAccessToken}`
     }
   })
     .then(response => {
@@ -164,8 +226,7 @@ const getAlbums = async (spotifyAccessToken: string) => {
       }
 
       return response.json();
-    })
-    .catch(error => console.error('Error fetching albums:', error));
+    });
 
   return data;
 };
@@ -181,10 +242,35 @@ const main = async () => {
   const authorizationCode = await login();
   if (authorizationCode) {
     // Get Spotify access token
-    const accessToken = (await getAccessToken(authorizationCode))?.access_token ?? '';
-    if (accessToken) {
+    let accessToken = await getAccessToken(authorizationCode);
+
+    if (accessToken?.access_token) {
       // Get user's albums
-      const albums = await getAlbums(accessToken);
+      let offset = 0;
+      let limit = 50;
+      let totalAlbums = 0;
+      let albums: Album[] = [];
+
+      let albumData: Album[];
+      albumData = await getUserAlbums(accessToken?.access_token, 50, 0);
+      albumData?.items?.forEach(album => albums.push(album.));
+      
+      offset += albumData?.items?.length || 0;
+      totalAlbums = albums?.total - (albums?.items?.length || 0) || 0;
+      while (totalAlbums > 0) {
+        // Continue fetching albums until all are retrieved
+        albumData = await getUserAlbums(accessToken?.access_token, limit, offset);
+        albumData?.items?.forEach(album => albums.push(album));
+
+        offset += albumData?.items?.length || 0;
+        totalAlbums -= albums?.items?.length || 0;
+      }
+
+      console.log(`Total albums retrieved: ${albums.length}`);
+
+      // TODO: Get tracks for each album
+
+      // TODO: Add tracks to playlist
     }
   }
 };
