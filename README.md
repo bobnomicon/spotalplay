@@ -1,5 +1,7 @@
 # spotalplay
 
+Uses the Spotify Web API to add all tracks from all of user's liked albums to a single playlist
+
 To install dependencies:
 
 ```bash

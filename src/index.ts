@@ -81,15 +81,23 @@ const start = async () => {
       // Create a new playlist
       const playlist: Playlist = await createPlaylist(accessToken.access_token, 'bobby7t9', 'Liked Albums', 'All tracks from all liked albums', false);
       if (playlist?.id) {
-        // Add all tracks to playlist (max 100 per request)
+        // Add all tracks to playlist (max 100 per request, max 11000 tracks per playlist)
         let offset = 0;
         let limit = 100;
         let totalTracks = tracks.length;
 
+        // Remove tracks that have invalid URIs
+        tracks = tracks.filter(track => {
+          if (track.uri && track.uri.startsWith('spotify:track:')) {
+            return true;
+          }
+          return false;
+        });
+
         let tracksToAdd = tracks.map(track => track.uri).slice(offset, offset + limit);
 
         while (totalTracks > 0) {
-          console.log(`Adding tracks to playlist '${playlist.name}': Offset: ${offset}, Tracks Left: ${totalTracks}`);
+          console.log(`Adding ${tracksToAdd.length} tracks to playlist '${playlist.name}': Offset: ${offset}, Tracks Left: ${totalTracks}`);
           await addTracksToPlaylist(accessToken.access_token, playlist.id, tracksToAdd);
           offset += limit;
           totalTracks -= limit;
