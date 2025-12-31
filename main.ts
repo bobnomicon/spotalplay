@@ -21,31 +21,24 @@ interface AccessToken {
 }
 
 interface TrackItem {
-  href: string;
   id: string;
   name: string;
-  track_number: number;
-  uri: string;
+}
+
+interface Track {
+  href: string;
+  limit: number;
+  next?: string;
+  offset: number;
+  previous?: string;
+  total: number;
+  items: TrackItem[]
 }
 
 interface AlbumItem {
-  added_at: string;
-  album: {
-    total_tracks: number;
-    href: string;
-    id: string;
-    name: string;
-    uri: string;
-    tracks: {
-      href: string;
-      limit: number;
-      next?: string;
-      offset: number;
-      previous?: string;
-      total: number;
-      items: TrackItem[]
-    }
-  }
+  id: string;
+  name: string;
+  tracks: Track;
 }
 
 interface Album {
@@ -54,7 +47,7 @@ interface Album {
   offset: number;
   previous?: string;
   total: number;
-  items: AlbumItem[]
+  items: { album: AlbumItem }[]
 }
 
 let envs: Envs;
@@ -210,8 +203,8 @@ const refreshAccessToken = async (refreshToken: string) => {
  */
 const getUserAlbums = async (spotifyAccessToken: string, offset: number = 0, limit: number = 50) => {
   const queryParams = new URLSearchParams({
-    limit: limit.toString(),
-    offset: offset.toString()
+    limit,
+    offset
   });
 
   const data: Album[] = await fetch(`${envs.spotifyApiUrl}/me/albums?${queryParams}`, {
@@ -219,14 +212,43 @@ const getUserAlbums = async (spotifyAccessToken: string, offset: number = 0, lim
     headers: {
       'Authorization': `Bearer ${spotifyAccessToken}`
     }
-  })
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`Error fetching albums: ${response.status} ${response.statusText}`);
-      }
+  }).then(response => {
+    if (!response.ok) {
+      throw new Error(`Error fetching albums: ${response.status} ${response.statusText}`);
+    }
 
-      return response.json();
-    });
+    return response.json();
+  });
+
+  return data;
+};
+
+/**
+ * Get tracks for a specific album from Spotify.
+ * @param spotifyAccessToken Spotify access token
+ * @param albumId Spotify ID of the album
+ * @param offset 
+ * @param limit 
+ * @returns 
+ */
+const getAlbumTracks = async (spotifyAccessToken: string, albumId: string, offset: number = 0, limit: number = 50) => {
+  const queryParams = new URLSearchParams({
+    limit,
+    offset
+  });
+
+  const data: Track[] = await fetch(`${envs.spotifyApiUrl}/albums/${albumId}/tracks?${queryParams}`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${spotifyAccessToken}`
+    }
+  }).then(response => {
+    if (!response.ok) {
+      throw new Error(`Error fetching album tracks: ${response.status} ${response.statusText}`);
+    }
+
+    return response.json();
+  });
 
   return data;
 };
@@ -249,28 +271,68 @@ const main = async () => {
       let offset = 0;
       let limit = 50;
       let totalAlbums = 0;
-      let albums: Album[] = [];
+      let albums: AlbumItem[] = [];
 
-      let albumData: Album[];
-      albumData = await getUserAlbums(accessToken?.access_token, 50, 0);
-      albumData?.items?.forEach(album => albums.push(album.));
+      let albumData: Album[] = await getUserAlbums(accessToken.access_token, offset, limit);
+      albumData?.items?.forEach((album: { album: AlbumItem }) => albums.push(album.album));
+      console.log('Total Albums:', albumData?.total);
       
-      offset += albumData?.items?.length || 0;
-      totalAlbums = albums?.total - (albums?.items?.length || 0) || 0;
-      while (totalAlbums > 0) {
-        // Continue fetching albums until all are retrieved
-        albumData = await getUserAlbums(accessToken?.access_token, limit, offset);
-        albumData?.items?.forEach(album => albums.push(album));
+      // Update offset and totalAlbums
+      offset += albumData?.items?.length;
+      totalAlbums = albumData?.total - albumData?.items?.length;
 
-        offset += albumData?.items?.length || 0;
-        totalAlbums -= albums?.items?.length || 0;
-      }
+      // Continue fetching albums until all are retrieved
+      // while (totalAlbums > 0) {
+      //   console.log('Offset:', offset, 'Albums Left:', totalAlbums);
+      //   albumData = await getUserAlbums(accessToken.access_token, offset, limit);
+      //   albumData?.items?.forEach((album: { album: AlbumItem }) => albums.push(album.album));
+
+      //   // Update offset and totalAlbums for the next iteration
+      //   offset += albumData?.items?.length;
+      //   totalAlbums -= albumData?.items?.length;
+      // }
 
       console.log(`Total albums retrieved: ${albums.length}`);
 
-      // TODO: Get tracks for each album
+      // Get tracks for each album
+      let tracks: TrackItem[] = [];
+      for (const album of albums) {
+        // Get tracks for the current album
+        let offset = 0;
+        let limit = 50;
+        let totalTracks = 0;
+
+        let trackData: Track[] = await getAlbumTracks(accessToken.access_token, album.id, offset, limit);
+        trackData?.items?.forEach((track: TrackItem) => tracks.push({
+          id: track.id,
+          name: track.name
+        }));
+        console.log(`Total tracks for album ${album.name}: ${trackData?.total}`);
+
+        // Update offset and totalTracks for the next iteration
+        offset += trackData?.items?.length;
+        totalTracks = trackData?.total - trackData?.items?.length;
+
+        // Continue fetching tracks until all are retrieved
+        while (totalTracks > 0) {
+          console.log(`Offset: ${offset}, Tracks Left: ${totalTracks}`);
+          trackData = await getAlbumTracks(accessToken.access_token, album.id, offset, limit);
+          trackData?.items?.forEach((track: TrackItem) => tracks.push({
+            id: track.id,
+            name: track.name
+          }));
+
+          // Update offset and totalTracks for the next iteration
+          offset += trackData?.items?.length;
+          totalTracks -= trackData?.items?.length;
+        }
+      }
 
       // TODO: Add tracks to playlist
+      for (const track of tracks) {
+        // Add each track to the playlist
+        console.log(track);
+      }
     }
   }
 };
