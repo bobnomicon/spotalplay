@@ -3,7 +3,7 @@
  * @param number length 
  * @returns string 
  */
-function generateRandomString(length: number) {
+export function generateRandomString(length: number) {
   const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
   let result = '';
   for (let i = 0; i < length; i++) {
@@ -11,7 +11,3 @@ function generateRandomString(length: number) {
   }
   return result;
 }
-
-export {
-  generateRandomString
-};
