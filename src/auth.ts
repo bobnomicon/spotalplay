@@ -77,13 +77,13 @@ export const getAccessToken = async (authorizationCode: string) => {
       redirect_uri: `${envs.spotifyRedirectUri}/callback`
     })
   })
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`Error fetching access token: ${response.status} ${response.statusText}`);
-      }
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`Error fetching access token: ${response.status} ${response.statusText}`);
+    }
 
-      return response.json();
-    });
+    return response.json();
+  });
 
   console.log('Access token obtained.');
   return data;
@@ -107,13 +107,13 @@ export const refreshAccessToken = async (refreshToken: string) => {
       client_id: envs.spotifyClientId
     })
   })
-    .then(response => {
-      if (!response.ok) {
-        throw new Error(`Error fetching refresh access token: ${response.status} ${response.statusText}`);
-      }
+  .then(response => {
+    if (!response.ok) {
+      throw new Error(`Error fetching refresh access token: ${response.status} ${response.statusText}`);
+    }
 
-      return response.json();
-    });
+    return response.json();
+  });
 
   console.log('Refresh access token obtained.');
   return data;

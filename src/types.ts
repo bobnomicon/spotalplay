@@ -18,10 +18,10 @@ export interface AccessToken {
 export interface TrackItem {
   id: string;
   name: string;
+  uri: string;
 }
 
 export interface Track {
-  href: string;
   limit: number;
   next?: string;
   offset: number;
@@ -43,4 +43,12 @@ export interface Album {
   previous?: string;
   total: number;
   items: { album: AlbumItem }[]
+}
+
+export interface Playlist {
+  id: string;
+  name: string;
+  description: string;
+  public: boolean;
+  tracks: Track;
 }

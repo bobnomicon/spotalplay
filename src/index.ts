@@ -1,6 +1,7 @@
-import type { Album, AlbumItem, Track, TrackItem } from './types';
+import type { Album, AlbumItem, Playlist, Track, TrackItem } from './types';
 import { login, getAccessToken } from './auth';
 import { getAlbums, getAlbumTracks } from './albums';
+import { createPlaylist, addTracksToPlaylist } from './playlists';
 
 const start = async () => {
   // Request user authorization from Spotify
@@ -17,7 +18,10 @@ const start = async () => {
       let albums: AlbumItem[] = [];
 
       let albumData: Album[] = await getAlbums(accessToken.access_token, offset, limit);
-      albumData?.items?.forEach((album: { album: AlbumItem }) => albums.push(album.album));
+      albumData?.items?.forEach((album: { album: AlbumItem }) => albums.push({
+        id: album.album.id,
+        name: album.album.name
+      }));
       console.log('Total Albums:', albumData?.total);
       
       // Update offset and totalAlbums
@@ -28,7 +32,10 @@ const start = async () => {
       while (totalAlbums > 0) {
         console.log('Offset:', offset, 'Albums Left:', totalAlbums);
         albumData = await getAlbums(accessToken.access_token, offset, limit);
-        albumData?.items?.forEach((album: { album: AlbumItem }) => albums.push(album.album));
+        albumData?.items?.forEach((album: { album: AlbumItem }) => albums.push({
+          id: album.album.id,
+          name: album.album.name
+        }));
 
         // Update offset and totalAlbums for the next iteration
         offset += albumData?.items?.length;
@@ -47,8 +54,8 @@ const start = async () => {
 
         let trackData: Track[] = await getAlbumTracks(accessToken.access_token, album.id, offset, limit);
         trackData?.items?.forEach((track: TrackItem) => tracks.push({
-          id: track.id,
-          name: track.name
+          name: track.name,
+          uri: track.uri
         }));
         console.log(`Total tracks for album ${album.name}: ${trackData?.total}`);
 
@@ -61,8 +68,8 @@ const start = async () => {
           console.log(`Offset: ${offset}, Tracks Left: ${totalTracks}`);
           trackData = await getAlbumTracks(accessToken.access_token, album.id, offset, limit);
           trackData?.items?.forEach((track: TrackItem) => tracks.push({
-            id: track.id,
-            name: track.name
+            name: track.name,
+            uri: track.uri
           }));
 
           // Update offset and totalTracks for the next iteration
@@ -71,12 +78,25 @@ const start = async () => {
         }
       }
 
-      // TODO: Create a new playlist
+      // Create a new playlist
+      const playlist: Playlist = await createPlaylist(accessToken.access_token, 'bobby7t9', 'Liked Albums', 'All tracks from all liked albums', false);
+      if (playlist?.id) {
+        // Add all tracks to playlist (max 100 per request)
+        let offset = 0;
+        let limit = 100;
+        let totalTracks = tracks.length;
 
-      // TODO: Add tracks to playlist
-      for (const track of tracks) {
-        // Add each track to the playlist
-        console.log(track);
+        let tracksToAdd = tracks.map(track => track.uri).slice(offset, offset + limit);
+
+        while (totalTracks > 0) {
+          console.log(`Adding tracks to playlist '${playlist.name}': Offset: ${offset}, Tracks Left: ${totalTracks}`);
+          await addTracksToPlaylist(accessToken.access_token, playlist.id, tracksToAdd);
+          offset += limit;
+          totalTracks -= limit;
+          tracksToAdd = tracks.map(track => track.uri).slice(offset, offset + limit);
+        }
+
+        console.log(`All tracks added to playlist '${playlist.name}' successfully.`);
       }
     }
   }
