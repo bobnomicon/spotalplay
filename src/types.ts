@@ -52,3 +52,11 @@ export interface Playlist {
   public: boolean;
   tracks: Track;
 }
+
+export interface UserInput {
+  username: string;
+  playlistName: string;
+  playlistDescription: string;
+  isPublic: boolean;
+  splitTracks: number;
+}
