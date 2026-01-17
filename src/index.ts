@@ -1,5 +1,5 @@
 import type { Album, AlbumItem, Playlist, Track, TrackItem } from './types';
-import readline from 'node:readline';
+import readline from 'node:readline/promises';
 import { login, getAccessToken } from './auth';
 import { getAlbums, getAlbumTracks } from './albums';
 import { createPlaylist, addTracksToPlaylist } from './playlists';
@@ -9,16 +9,13 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
-const getUserInput = (question: string, valueName: string): Promise<string> => {
-  return new Promise<string>((resolve) => {
-    rl.question(question, (answer) => {
-      if (!answer.trim()) {
-        console.log('\n\x1b[31m%s\x1b[0m', `${valueName.charAt(0).toUpperCase() + valueName.slice(1)} cannot be empty`);
-        return getUserInput(question, valueName).then(resolve);
-      }
-      resolve(answer.trim());
-    });
-  });
+const getUserInput = async (question: string, valueName: string) => {
+  const answer = await rl.question(question);
+  if (!answer.trim()) {
+    console.log('\n\x1b[31m%s\x1b[0m', `${valueName.charAt(0).toUpperCase() + valueName.slice(1)} cannot be empty`);
+    return getUserInput(question, valueName);
+  }
+  return answer.trim();
 };
 
 const start = async () => {
@@ -33,6 +30,7 @@ const start = async () => {
     console.log('\n\x1b[33m%s\x1b[0m', 'Number of tracks out of range. Defaulting to 11000.');
     splitTracks = 11000;
   }
+  rl.close();
 
   // Request user authorization from Spotify
   const authorizationCode = await login();
@@ -137,9 +135,6 @@ const start = async () => {
         }
 
         console.log(`All tracks added to playlist '${playlist.name}' successfully.`);
-
-        // Exit successfully
-        process.exit(0);
       }
     }
   }
