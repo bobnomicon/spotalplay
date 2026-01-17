@@ -1,21 +1,45 @@
-import { Hono } from 'hono';
+import envs from './envs';
 
-const app = new Hono();
+const url = new URL(envs.spotifyRedirectUri);
 
-let code = '';
+/**
+ * Authorization code stored for retrieval
+ */
+let authorizationCode = '';
 
-app.get('/code', (c) => {
-  return c.json({ code });    
-});
+const server = Bun.serve({
+  hostname: url.hostname,
+  port: url.port ? parseInt(url.port) : 80,
 
-app.get('/callback', (c) => {
-  if (c.req.query('error')) {
-    c.status(400);
-    return c.text(`Error during authorization: ${c.req.query('error')}`);
+  routes: {
+    '/code': {
+      GET: () => {
+        if (!authorizationCode) {
+          return new Response('Authorization code not yet available.', { status: 404 });
+        }
+
+        // Clear the code after sending it
+        const code = authorizationCode;
+        authorizationCode = '';
+
+        return Response.json({ code });
+      }
+    },
+
+    '/callback': {
+      GET: req => {
+        if (req.url.includes('error=')) {
+          const error = req.url.split('error=')[1] ?? '';
+          return new Response(`Error during authorization: ${error}`, { status: 400 });
+        }
+
+        // Get the code from the URL and store it, clear it after retrieval or timeout
+        authorizationCode = req.url.split('code=')[1] ?? '';
+
+        return new Response('Authorization code received. You can now close this window.');
+      }
+    }
   }
-
-  code = c.req.query('code') ?? '';
-  return c.text('Authorization code received. You can now close this window.');
 });
 
-export default app;
+console.log(`Server running at http://${server.hostname}:${server.port}`);
