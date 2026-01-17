@@ -35,6 +35,9 @@ const server = Bun.serve({
 
         // Get the code from the URL and store it, clear it after retrieval or timeout
         authorizationCode = req.url.split('code=')[1] ?? '';
+        setTimeout(() => {
+          authorizationCode = '';
+        }, 2 * 60 * 1000); // Clear after 2 minutes
 
         return new Response('Authorization code received. You can now close this window.');
       }
