@@ -9,7 +9,7 @@ const start = async () => {
   const { username, playlistName, playlistDescription, isPublic, splitTracks } = await getUserInput();
 
   // Request user authorization from Spotify
-  const authorizationCode = await login();
+  const authorizationCode: string = await login();
   if (!authorizationCode) {
     console.log('Failed to obtain authorization code. Exiting.');
     return;
@@ -89,36 +89,54 @@ const start = async () => {
     }
   }
 
-  // TODO: Refactor to handle splitting tracks into multiple playlists if they exceed 11000
+  // Remove tracks that have invalid URIs
+  tracks = tracks.filter(track => {
+    if (track.uri && track.uri.startsWith('spotify:track:')) {
+      return true;
+    }
+    return false;
+  });
 
-  // Create a new playlist
-  const playlist: Playlist = await createPlaylist(accessToken.access_token, username, playlistName, playlistDescription, isPublic);
-  if (playlist?.id) {
-    // Add all tracks to playlist (max 100 per request, max 11000 tracks per playlist)
-    let offset = 0;
-    let limit = 100;
-    let totalTracks = tracks.length;
+  // Add all tracks to playlist (max 100 per request, max 11000 tracks per playlist)
+  let totalPlaylists = Math.ceil(tracks.length / splitTracks);
+  let currentPlaylist = 1;
+  let tracksOffset = 0;
+  let requestLimit = 100;
+  let totalTracks = splitTracks > tracks.length ? tracks.length : splitTracks;
 
-    // Remove tracks that have invalid URIs
-    tracks = tracks.filter(track => {
-      if (track.uri && track.uri.startsWith('spotify:track:')) {
-        return true;
+  while (totalPlaylists > 0) {
+    // Create a new playlist
+    const currentPlaylistName = playlistName + (totalPlaylists > 1 ? ` ${currentPlaylist}` : '');
+
+    const playlist: Playlist = await createPlaylist(accessToken.access_token, username, currentPlaylistName, playlistDescription, isPublic);
+    if (playlist?.id) {
+      // Add tracks to the newly created playlist in batches of 100
+      let tracksToAdd = tracks.map(track => track.uri).slice(tracksOffset, tracksOffset + requestLimit);
+      let playlistOffset = 0;
+
+      while (totalTracks > 0) {
+        console.log(`Adding ${tracksToAdd.length} tracks to playlist '${playlist.name}': Offset: ${playlistOffset}, Tracks Left: ${totalTracks}`);
+        await addTracksToPlaylist(accessToken.access_token, playlist.id, tracksToAdd);
+
+        // Update offsets and totalTracks for the next iteration
+        tracksOffset += requestLimit;
+        totalTracks -= requestLimit;
+        tracksToAdd = tracks.map(track => track.uri).slice(tracksOffset, tracksOffset + requestLimit);
+        playlistOffset += requestLimit;
       }
-      return false;
-    });
 
-    let tracksToAdd = tracks.map(track => track.uri).slice(offset, offset + limit);
-
-    while (totalTracks > 0) {
-      console.log(`Adding ${tracksToAdd.length} tracks to playlist '${playlist.name}': Offset: ${offset}, Tracks Left: ${totalTracks}`);
-      await addTracksToPlaylist(accessToken.access_token, playlist.id, tracksToAdd);
-      offset += limit;
-      totalTracks -= limit;
-      tracksToAdd = tracks.map(track => track.uri).slice(offset, offset + limit);
+      console.log(`All tracks added to playlist '${playlist.name}' successfully.`);
     }
 
-    console.log(`All tracks added to playlist '${playlist.name}' successfully.`);
+    // Update for the next playlist
+    totalPlaylists--;
+    currentPlaylist++;
+    if (totalPlaylists > 0) {
+      totalTracks = splitTracks > tracks.length - tracksOffset ? tracks.length - tracksOffset : splitTracks;
+    }
   }
+
+  console.log('All done!');
 };
 
 // Run the app on execution
