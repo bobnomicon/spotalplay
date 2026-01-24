@@ -12,7 +12,8 @@ export const login: string = async () => {
     response_type: 'code',
     redirect_uri: `${envs.spotifyRedirectUri}/callback`,
     state: generateRandomString(16),
-    scope: envs.spotifyScope
+    scope: envs.spotifyScope,
+    show_dialog: true
   });
 
   return await fetch(`${envs.spotifyAccountsUrl}/authorize?${queryParams}`)
@@ -33,18 +34,24 @@ export const login: string = async () => {
           setTimeout(async () => {
             console.log('Attempting to fetch authorization code from callback URL...');
 
-            const data = await fetch(`${envs.spotifyRedirectUri}/code`).then(response => response.json());
-              
+            const response = await fetch(`${envs.spotifyRedirectUri}/code`);
+            if (!response.ok) {
+              const error: { message: string } = await response.json();
+              console.log(`${error.message} Retrying.`);
+              return resolve();
+            }
+
+            const data: { code: string } = await response.json();              
             if (data.code) {
               code = data.code;
             }
 
-            resolve();
+            return resolve();
           }, 3000);
         });
       };
 
-      let maxAttempts = 10;
+      let maxAttempts = 20; // Try for up to 1 minute
       while(!code && maxAttempts > 0) {
         await fetchAuthorizationCode();
         maxAttempts--;
@@ -54,7 +61,7 @@ export const login: string = async () => {
         throw new Error('Failed to fetch authorization code after maximum attempts.');
       }
 
-      console.log('Authorization code obtained.');
+      console.log('Authorization code obtained!');
       return code;
     });
 };

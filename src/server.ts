@@ -15,7 +15,9 @@ const server = Bun.serve({
     '/code': {
       GET: () => {
         if (!authorizationCode) {
-          return new Response('Authorization code not yet available.', { status: 404 });
+          return Response.json({
+            message: 'Authorization code not yet available.'
+          }, { status: 404 });
         }
 
         // Clear the code after sending it
