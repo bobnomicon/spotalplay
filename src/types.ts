@@ -16,7 +16,7 @@ export interface AccessToken {
 }
 
 export interface TrackItem {
-  id: string;
+  id?: string;
   name: string;
   uri: string;
 }
@@ -33,7 +33,7 @@ export interface Track {
 export interface AlbumItem {
   id: string;
   name: string;
-  tracks: Track;
+  tracks?: Track;
 }
 
 export interface Album {

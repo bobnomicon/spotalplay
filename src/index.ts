@@ -9,7 +9,7 @@ const start = async () => {
   const { username, playlistName, playlistDescription, isPublic, splitTracks } = await getUserInput();
 
   // Request user authorization from Spotify
-  const authorizationCode: string = await login();
+  const authorizationCode = await login();
   if (!authorizationCode) {
     console.log('Failed to obtain authorization code. Exiting.');
     return;
@@ -28,13 +28,13 @@ const start = async () => {
   let totalAlbums = 0;
   const albums: AlbumItem[] = [];
 
-  let albumData: Album[] = await getAlbums(accessToken.access_token, offset, limit);
-  albumData?.items?.forEach((album: { album: AlbumItem }) => albums.push({
+  let albumData = await getAlbums(accessToken.access_token, offset, limit) as Album;
+  albumData?.items?.forEach((album) => albums.push({
     id: album.album.id,
     name: album.album.name
   }));
   console.log('Total Albums:', albumData?.total);
-  
+
   // Update offset and totalAlbums
   offset += albumData?.items?.length;
   totalAlbums = albumData?.total - albumData?.items?.length;
@@ -42,8 +42,8 @@ const start = async () => {
   // Continue fetching albums until all are retrieved
   while (totalAlbums > 0) {
     console.log('Offset:', offset, 'Albums Left:', totalAlbums);
-    albumData = await getAlbums(accessToken.access_token, offset, limit);
-    albumData?.items?.forEach((album: { album: AlbumItem }) => albums.push({
+    albumData = await getAlbums(accessToken.access_token, offset, limit) as Album;
+    albumData?.items?.forEach((album) => albums.push({
       id: album.album.id,
       name: album.album.name
     }));
@@ -63,8 +63,8 @@ const start = async () => {
     let limit = 50;
     let totalTracks = 0;
 
-    let trackData: Track[] = await getAlbumTracks(accessToken.access_token, album.id, offset, limit);
-    trackData?.items?.forEach((track: TrackItem) => tracks.push({
+    let trackData = await getAlbumTracks(accessToken.access_token, album.id, offset, limit) as Track;
+    trackData?.items?.forEach((track) => tracks.push({
       name: track.name,
       uri: track.uri
     }));
@@ -77,8 +77,8 @@ const start = async () => {
     // Continue fetching tracks until all are retrieved
     while (totalTracks > 0) {
       console.log(`Offset: ${offset}, Tracks Left: ${totalTracks}`);
-      trackData = await getAlbumTracks(accessToken.access_token, album.id, offset, limit);
-      trackData?.items?.forEach((track: TrackItem) => tracks.push({
+      trackData = await getAlbumTracks(accessToken.access_token, album.id, offset, limit) as Track;
+      trackData?.items?.forEach((track) => tracks.push({
         name: track.name,
         uri: track.uri
       }));
@@ -108,7 +108,7 @@ const start = async () => {
     // Create a new playlist
     const currentPlaylistName = playlistName + (totalPlaylists > 1 ? ` ${currentPlaylist}` : '');
 
-    const playlist: Playlist = await createPlaylist(accessToken.access_token, username, currentPlaylistName, playlistDescription, isPublic);
+    const playlist = await createPlaylist(accessToken.access_token, username, currentPlaylistName, playlistDescription, isPublic);
     if (playlist?.id) {
       // Add tracks to the newly created playlist in batches of 100
       let tracksToAdd = tracks.map(track => track.uri).slice(tracksOffset, tracksOffset + requestLimit);

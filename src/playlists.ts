@@ -4,9 +4,9 @@ import envs from './envs';
 /**
  * Creates a new playlist for the user on Spotify.
  * @param spotifyAccessToken Spotify access token
- * @param name 
- * @param description 
- * @param isPublic 
+ * @param name
+ * @param description
+ * @param isPublic
  */
 export const createPlaylist = async (spotifyAccessToken: string, userId: string, name: string, description: string, isPublic: boolean = false) => {
   const requestBody = {
@@ -15,7 +15,7 @@ export const createPlaylist = async (spotifyAccessToken: string, userId: string,
     public: isPublic
   };
 
-  const data: Playlist = await fetch(`${envs.spotifyApiUrl}/users/${userId}/playlists`, {
+  const data = await fetch(`${envs.spotifyApiUrl}/users/${userId}/playlists`, {
     method: 'POST',
     headers: {
       'Authorization': `Bearer ${spotifyAccessToken}`
@@ -27,7 +27,7 @@ export const createPlaylist = async (spotifyAccessToken: string, userId: string,
       throw new Error(`Error creating playlist: ${response.status} ${response.statusText}`);
     }
     return response.json();
-  });
+  }) as Playlist;
 
   console.log(`Playlist '${data.name}' created successfully.`);
   return data;

@@ -6,15 +6,15 @@ import envs from './envs';
 /**
  * Request user authorization from Spotify. Returns authorization code on success.
  */
-export const login: string = async () => {
+export const login = async (): Promise<string> => {
   const queryParams = new URLSearchParams({
     client_id: envs.spotifyClientId,
     response_type: 'code',
     redirect_uri: `${envs.spotifyRedirectUri}/callback`,
     state: generateRandomString(16),
     scope: envs.spotifyScope,
-    show_dialog: true
-  });
+    show_dialog: 'true'
+  }) as URLSearchParams;
 
   return await fetch(`${envs.spotifyAccountsUrl}/authorize?${queryParams}`)
     .then(async response => {
@@ -36,12 +36,12 @@ export const login: string = async () => {
 
             const response = await fetch(`${envs.spotifyRedirectUri}/code`);
             if (!response.ok) {
-              const error: { message: string } = await response.json();
+              const error = await response.json() as { message: string };
               console.log(`${error.message} Retrying.`);
               return resolve();
             }
 
-            const data: { code: string } = await response.json();              
+            const data = await response.json() as { code: string };
             if (data.code) {
               code = data.code;
             }
@@ -70,9 +70,9 @@ export const login: string = async () => {
  * Gets an access token from the Spotify Accounts service.
  */
 export const getAccessToken = async (authorizationCode: string) => {
-  const credentials = (new Buffer.from(`${envs.spotifyClientId}:${envs.spotifyClientSecret}`).toString('base64'));
+  const credentials = Buffer.from(`${envs.spotifyClientId}:${envs.spotifyClientSecret}`).toString('base64');
 
-  const data: AccessToken = await fetch(`${envs.spotifyAccountsUrl}/api/token`, {
+  const data = await fetch(`${envs.spotifyAccountsUrl}/api/token`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -90,7 +90,7 @@ export const getAccessToken = async (authorizationCode: string) => {
     }
 
     return response.json();
-  });
+  }) as AccessToken;
 
   console.log('Access token obtained.');
   return data;
@@ -100,9 +100,9 @@ export const getAccessToken = async (authorizationCode: string) => {
  * Refresh access token from the Spotify Accounts service.
  */
 export const refreshAccessToken = async (refreshToken: string) => {
-  const credentials = (new Buffer.from(`${envs.spotifyClientId}:${envs.spotifyClientSecret}`).toString('base64'));
+  const credentials = Buffer.from(`${envs.spotifyClientId}:${envs.spotifyClientSecret}`).toString('base64');
 
-  const data: AccessToken = await fetch(`${envs.spotifyAccountsUrl}/api/token`, {
+  const data = await fetch(`${envs.spotifyAccountsUrl}/api/token`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
@@ -120,7 +120,7 @@ export const refreshAccessToken = async (refreshToken: string) => {
     }
 
     return response.json();
-  });
+  }) as AccessToken;
 
   console.log('Refresh access token obtained.');
   return data;
