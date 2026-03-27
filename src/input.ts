@@ -26,7 +26,8 @@ export const getUserInput = async () => {
   const playlistDescription = await _getAnswer('Enter the description for the new playlist: ', 'playlist description');
   const isPublic = await _getAnswer('Should the playlist be public? (yes/no): ', 'public status');
 
-  let splitTracks = await _getAnswer('Should the tracks exceed the maximum number of tracks per playlist (11000) and need to be split into separate playlists, number of tracks per playlist (must be between 1 and 11000): ', 'number of tracks');
+  let splitTracks: string | number = await _getAnswer('Should the tracks exceed the maximum number of tracks per playlist (11000) and need to be split into separate playlists, number of tracks per playlist (must be between 1 and 11000): ', 'number of tracks');
+  splitTracks = +splitTracks;
   if (splitTracks < 1 || splitTracks > 11000) {
     // Double-check that the number of tracks is within the allowed range, otherwise default to 11000
     console.log('\n\x1b[33m%s\x1b[0m', 'Number of tracks out of range. Defaulting to 11000.');
@@ -41,7 +42,7 @@ export const getUserInput = async () => {
     playlistName,
     playlistDescription,
     isPublic: isPublic.toLowerCase() === 'yes',
-    splitTracks: Number(splitTracks)
+    splitTracks
   };
 
   return userData;

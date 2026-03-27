@@ -1,6 +1,7 @@
 import type { Playlist } from './types';
 import envs from './envs';
 
+// 2/26 - [REMOVED] Create Playlist for user (POST /users/{user_id}/playlists) - Create a playlist for a Spotify user. Use POST /me/playlists instead
 /**
  * Creates a new playlist for the user on Spotify.
  * @param spotifyAccessToken Spotify access token
@@ -33,6 +34,7 @@ export const createPlaylist = async (spotifyAccessToken: string, userId: string,
   return data;
 };
 
+// 2/26 - [REMOVED] Add Items to Playlist (POST /playlists/{id}/tracks) – Adds tracks or episodes to a playlist. Use POST /playlists/{id}/items instead
 export const addTracksToPlaylist = async (spotifyAccessToken: string, playlistId: string, uris: string[]) => {
   return await fetch(`${envs.spotifyApiUrl}/playlists/${playlistId}/tracks`, {
     method: 'POST',

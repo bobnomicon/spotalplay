@@ -28,7 +28,7 @@ const start = async () => {
   let totalAlbums = 0;
   const albums: AlbumItem[] = [];
 
-  let albumData = await getAlbums(accessToken.access_token, offset, limit) as Album;
+  let albumData = await getAlbums(accessToken.access_token, offset, limit);
   albumData?.items?.forEach((album) => albums.push({
     id: album.album.id,
     name: album.album.name
@@ -63,7 +63,7 @@ const start = async () => {
     let limit = 50;
     let totalTracks = 0;
 
-    let trackData = await getAlbumTracks(accessToken.access_token, album.id, offset, limit) as Track;
+    let trackData = await getAlbumTracks(accessToken.access_token, album.id, offset, limit);
     trackData?.items?.forEach((track) => tracks.push({
       name: track.name,
       uri: track.uri
@@ -77,7 +77,7 @@ const start = async () => {
     // Continue fetching tracks until all are retrieved
     while (totalTracks > 0) {
       console.log(`Offset: ${offset}, Tracks Left: ${totalTracks}`);
-      trackData = await getAlbumTracks(accessToken.access_token, album.id, offset, limit) as Track;
+      trackData = await getAlbumTracks(accessToken.access_token, album.id, offset, limit);
       trackData?.items?.forEach((track) => tracks.push({
         name: track.name,
         uri: track.uri
