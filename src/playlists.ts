@@ -9,43 +9,55 @@ import envs from './envs';
  * @param description
  * @param isPublic
  */
-export const createPlaylist = async (spotifyAccessToken: string, userId: string, name: string, description: string, isPublic: boolean = false) => {
+export const createPlaylist = async (
+  spotifyAccessToken: string,
+  userId: string,
+  name: string,
+  description: string,
+  isPublic: boolean = false
+) => {
   const requestBody = {
     name,
     description,
     public: isPublic
   };
 
-  const data = await fetch(`${envs.spotifyApiUrl}/users/${userId}/playlists`, {
+  const data = (await fetch(`${envs.spotifyApiUrl}/users/${userId}/playlists`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${spotifyAccessToken}`
+      Authorization: `Bearer ${spotifyAccessToken}`
     },
     body: JSON.stringify(requestBody)
-  })
-  .then(response => {
+  }).then(response => {
     if (!response.ok) {
-      throw new Error(`Error creating playlist: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `Error creating playlist: ${response.status} ${response.statusText}`
+      );
     }
     return response.json();
-  }) as Playlist;
+  })) as Playlist;
 
   console.log(`Playlist '${data.name}' created successfully.`);
   return data;
 };
 
 // 2/26 - [REMOVED] Add Items to Playlist (POST /playlists/{id}/tracks) – Adds tracks or episodes to a playlist. Use POST /playlists/{id}/items instead
-export const addTracksToPlaylist = async (spotifyAccessToken: string, playlistId: string, uris: string[]) => {
+export const addTracksToPlaylist = async (
+  spotifyAccessToken: string,
+  playlistId: string,
+  uris: string[]
+) => {
   return await fetch(`${envs.spotifyApiUrl}/playlists/${playlistId}/tracks`, {
     method: 'POST',
     headers: {
-      'Authorization': `Bearer ${spotifyAccessToken}`
+      Authorization: `Bearer ${spotifyAccessToken}`
     },
     body: JSON.stringify({ uris })
-  })
-  .then(response => {
+  }).then(response => {
     if (!response.ok) {
-      throw new Error(`Error adding tracks to playlist: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `Error adding tracks to playlist: ${response.status} ${response.statusText}`
+      );
     }
     return true;
   });

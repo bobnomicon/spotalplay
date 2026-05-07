@@ -15,9 +15,12 @@ const server = Bun.serve({
     '/code': {
       GET: () => {
         if (!authorizationCode) {
-          return Response.json({
-            message: 'Authorization code not yet available.'
-          }, { status: 404 });
+          return Response.json(
+            {
+              message: 'Authorization code not yet available.'
+            },
+            { status: 404 }
+          );
         }
 
         // Clear the code after sending it
@@ -32,16 +35,23 @@ const server = Bun.serve({
       GET: req => {
         if (req.url.includes('error=')) {
           const error = req.url.split('error=')[1] ?? '';
-          return new Response(`Error during authorization: ${error}`, { status: 400 });
+          return new Response(`Error during authorization: ${error}`, {
+            status: 400
+          });
         }
 
         // Get the code from the URL and store it, clear it after retrieval or timeout
         authorizationCode = req.url.split('code=')[1] ?? '';
-        setTimeout(() => {
-          authorizationCode = '';
-        }, 2 * 60 * 1000); // Clear after 2 minutes
+        setTimeout(
+          () => {
+            authorizationCode = '';
+          },
+          2 * 60 * 1000
+        ); // Clear after 2 minutes
 
-        return new Response('Authorization code received. You can now close this window.');
+        return new Response(
+          'Authorization code received. You can now close this window.'
+        );
       }
     }
   }

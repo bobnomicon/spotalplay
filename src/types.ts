@@ -27,7 +27,7 @@ export interface Track {
   offset: number;
   previous?: string;
   total: number;
-  items: TrackItem[]
+  items: TrackItem[];
 }
 
 export interface AlbumItem {
@@ -42,7 +42,7 @@ export interface Album {
   offset: number;
   previous?: string;
   total: number;
-  items: { album: AlbumItem }[]
+  items: { album: AlbumItem }[];
 }
 
 export interface Playlist {

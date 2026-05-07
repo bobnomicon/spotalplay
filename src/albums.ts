@@ -8,24 +8,30 @@ import envs from './envs';
  * @param limit
  * @returns
  */
-export const getAlbums = async (spotifyAccessToken: string, offset: number = 0, limit: number = 50) => {
+export const getAlbums = async (
+  spotifyAccessToken: string,
+  offset: number = 0,
+  limit: number = 50
+) => {
   const queryParams = new URLSearchParams({
     limit: limit.toString(),
     offset: offset.toString()
   }) as URLSearchParams;
 
-  const data = await fetch(`${envs.spotifyApiUrl}/me/albums?${queryParams}`, {
+  const data = (await fetch(`${envs.spotifyApiUrl}/me/albums?${queryParams}`, {
     method: 'GET',
     headers: {
-      'Authorization': `Bearer ${spotifyAccessToken}`
+      Authorization: `Bearer ${spotifyAccessToken}`
     }
   }).then(response => {
     if (!response.ok) {
-      throw new Error(`Error fetching albums: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `Error fetching albums: ${response.status} ${response.statusText}`
+      );
     }
 
     return response.json();
-  }) as Album;
+  })) as Album;
 
   return data;
 };
@@ -38,24 +44,34 @@ export const getAlbums = async (spotifyAccessToken: string, offset: number = 0, 
  * @param limit
  * @returns
  */
-export const getAlbumTracks = async (spotifyAccessToken: string, albumId: string, offset: number = 0, limit: number = 50) => {
+export const getAlbumTracks = async (
+  spotifyAccessToken: string,
+  albumId: string,
+  offset: number = 0,
+  limit: number = 50
+) => {
   const queryParams = new URLSearchParams({
     limit: limit.toString(),
     offset: offset.toString()
   });
 
-  const data = await fetch(`${envs.spotifyApiUrl}/albums/${albumId}/tracks?${queryParams}`, {
-    method: 'GET',
-    headers: {
-      'Authorization': `Bearer ${spotifyAccessToken}`
+  const data = (await fetch(
+    `${envs.spotifyApiUrl}/albums/${albumId}/tracks?${queryParams}`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${spotifyAccessToken}`
+      }
     }
-  }).then(response => {
+  ).then(response => {
     if (!response.ok) {
-      throw new Error(`Error fetching album tracks: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `Error fetching album tracks: ${response.status} ${response.statusText}`
+      );
     }
 
     return response.json();
-  }) as Track;
+  })) as Track;
 
   return data;
 };

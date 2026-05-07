@@ -16,81 +16,98 @@ export const login = async (): Promise<string> => {
     show_dialog: 'true'
   }) as URLSearchParams;
 
-  return await fetch(`${envs.spotifyAccountsUrl}/authorize?${queryParams}`)
-    .then(async response => {
-      if (!response.ok) {
-        throw new Error(`Error requesting user authorization: ${response.status} ${response.statusText}`);
-      }
+  return await fetch(
+    `${envs.spotifyAccountsUrl}/authorize?${queryParams}`
+  ).then(async response => {
+    if (!response.ok) {
+      throw new Error(
+        `Error requesting user authorization: ${response.status} ${response.statusText}`
+      );
+    }
 
-      // Open the authorization URL in the user's browser
-      const start = process.platform === 'darwin' ? 'open' : process.platform === 'win32' ? 'start' : 'xdg-open';
-      const open = spawn(start, [response.url]);
+    // Open the authorization URL in the user's browser
+    const start =
+      process.platform === 'darwin'
+        ? 'open'
+        : process.platform === 'win32'
+          ? 'start'
+          : 'xdg-open';
+    const open = spawn(start, [response.url]);
 
-      console.log('Authorization URL opened in browser. Please complete the authorization process.');
+    console.log(
+      'Authorization URL opened in browser. Please complete the authorization process.'
+    );
 
-      let code = '';
-      const fetchAuthorizationCode = async () => {
-        return new Promise<void>(async resolve => {
-          setTimeout(async () => {
-            console.log('Attempting to fetch authorization code from callback URL...');
+    let code = '';
+    const fetchAuthorizationCode = async () => {
+      return new Promise<void>(async resolve => {
+        setTimeout(async () => {
+          console.log(
+            'Attempting to fetch authorization code from callback URL...'
+          );
 
-            const response = await fetch(`${envs.spotifyRedirectUri}/code`);
-            if (!response.ok) {
-              const error = await response.json() as { message: string };
-              console.log(`${error.message} Retrying.`);
-              return resolve();
-            }
-
-            const data = await response.json() as { code: string };
-            if (data.code) {
-              code = data.code;
-            }
-
+          const response = await fetch(`${envs.spotifyRedirectUri}/code`);
+          if (!response.ok) {
+            const error = (await response.json()) as { message: string };
+            console.log(`${error.message} Retrying.`);
             return resolve();
-          }, 3000);
-        });
-      };
+          }
 
-      let maxAttempts = 20; // Try for up to 1 minute
-      while(!code && maxAttempts > 0) {
-        await fetchAuthorizationCode();
-        maxAttempts--;
-      }
+          const data = (await response.json()) as { code: string };
+          if (data.code) {
+            code = data.code;
+          }
 
-      if (!code) {
-        throw new Error('Failed to fetch authorization code after maximum attempts.');
-      }
+          return resolve();
+        }, 3000);
+      });
+    };
 
-      console.log('Authorization code obtained!');
-      return code;
-    });
+    let maxAttempts = 20; // Try for up to 1 minute
+    while (!code && maxAttempts > 0) {
+      await fetchAuthorizationCode();
+      maxAttempts--;
+    }
+
+    if (!code) {
+      throw new Error(
+        'Failed to fetch authorization code after maximum attempts.'
+      );
+    }
+
+    console.log('Authorization code obtained!');
+    return code;
+  });
 };
 
 /**
  * Gets an access token from the Spotify Accounts service.
  */
 export const getAccessToken = async (authorizationCode: string) => {
-  const credentials = Buffer.from(`${envs.spotifyClientId}:${envs.spotifyClientSecret}`).toString('base64');
+  const credentials = Buffer.from(
+    `${envs.spotifyClientId}:${envs.spotifyClientSecret}`
+  ).toString('base64');
 
-  const data = await fetch(`${envs.spotifyAccountsUrl}/api/token`, {
+  const data = (await fetch(`${envs.spotifyAccountsUrl}/api/token`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
-      'Authorization': `Basic ${credentials}`
+      Authorization: `Basic ${credentials}`
     },
     body: new URLSearchParams({
       grant_type: 'authorization_code',
       code: authorizationCode,
       redirect_uri: `${envs.spotifyRedirectUri}/callback`
     })
-  })
-  .then(response => {
+  }).then(response => {
     if (!response.ok) {
-      throw new Error(`Error fetching access token: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `Error fetching access token: ${response.status} ${response.statusText}`
+      );
     }
 
     return response.json();
-  }) as AccessToken;
+  })) as AccessToken;
 
   console.log('Access token obtained.');
   return data;
@@ -100,27 +117,30 @@ export const getAccessToken = async (authorizationCode: string) => {
  * Refresh access token from the Spotify Accounts service.
  */
 export const refreshAccessToken = async (refreshToken: string) => {
-  const credentials = Buffer.from(`${envs.spotifyClientId}:${envs.spotifyClientSecret}`).toString('base64');
+  const credentials = Buffer.from(
+    `${envs.spotifyClientId}:${envs.spotifyClientSecret}`
+  ).toString('base64');
 
-  const data = await fetch(`${envs.spotifyAccountsUrl}/api/token`, {
+  const data = (await fetch(`${envs.spotifyAccountsUrl}/api/token`, {
     method: 'POST',
     headers: {
       'Content-Type': 'application/x-www-form-urlencoded',
-      'Authorization': `Basic ${credentials}`
+      Authorization: `Basic ${credentials}`
     },
     body: new URLSearchParams({
       grant_type: 'refresh_token',
       refresh_token: refreshToken,
       client_id: envs.spotifyClientId
     })
-  })
-  .then(response => {
+  }).then(response => {
     if (!response.ok) {
-      throw new Error(`Error fetching refresh access token: ${response.status} ${response.statusText}`);
+      throw new Error(
+        `Error fetching refresh access token: ${response.status} ${response.statusText}`
+      );
     }
 
     return response.json();
-  }) as AccessToken;
+  })) as AccessToken;
 
   console.log('Refresh access token obtained.');
   return data;
