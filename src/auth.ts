@@ -19,7 +19,7 @@ export const login = async (): Promise<string> => {
     state: generateRandomString(16),
     scope: envs.spotifyScope,
     show_dialog: 'true'
-  }) as URLSearchParams;
+  });
 
   const response = await fetch(
     `${envs.spotifyAccountsUrl}/authorize?${queryParams}`

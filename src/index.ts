@@ -26,9 +26,7 @@ const collectPaginatedItems = async <TItem>(
   return items;
 };
 
-const getSavedAlbums = async (
-  spotifyAccessToken: string
-): Promise<SpotifyAlbum[]> => {
+const getSavedAlbums = async (spotifyAccessToken: string) => {
   const savedAlbums = await collectPaginatedItems(
     (offset, limit) => getAlbums(spotifyAccessToken, offset, limit),
     ALBUM_PAGE_LIMIT
@@ -40,7 +38,7 @@ const getSavedAlbums = async (
 const getAlbumTracksByAlbum = async (
   spotifyAccessToken: string,
   album: SpotifyAlbum
-): Promise<SpotifyTrack[]> => {
+) => {
   const tracks = await collectPaginatedItems(
     (offset, limit) =>
       getAlbumTracks(spotifyAccessToken, album.id, offset, limit),
@@ -54,10 +52,7 @@ const getAlbumTracksByAlbum = async (
 const isValidSpotifyTrackUri = (uri: SpotifyTrack['uri']): uri is string =>
   !!uri && uri.startsWith('spotify:track:');
 
-const createPlaylistBatches = (
-  trackUris: string[],
-  playlistSize: number
-): string[][] => {
+const createPlaylistBatches = (trackUris: string[], playlistSize: number) => {
   const playlists: string[][] = [];
 
   for (
@@ -83,7 +78,7 @@ const addTracksInBatches = async (
   playlistId: string,
   trackUris: string[],
   playlistName: string
-): Promise<void> => {
+) => {
   for (
     let offset = 0;
     offset < trackUris.length;
@@ -103,7 +98,7 @@ const addTracksInBatches = async (
   }
 };
 
-const start = async (): Promise<void> => {
+const start = async () => {
   const { username, playlistName, playlistDescription, isPublic, splitTracks } =
     await getUserInput();
 

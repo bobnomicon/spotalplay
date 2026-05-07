@@ -8,10 +8,7 @@ const rl = readline.createInterface({
   output: process.stdout
 });
 
-const getAnswer = async (
-  question: string,
-  valueName: string
-): Promise<string> => {
+const getAnswer = async (question: string, valueName: string) => {
   const answer = await rl.question(question);
   const trimmedAnswer = answer.trim();
 
@@ -26,10 +23,10 @@ const getAnswer = async (
   return trimmedAnswer;
 };
 
-const parsePlaylistVisibility = (value: string): boolean =>
+const parsePlaylistVisibility = (value: string) =>
   value.toLowerCase() === 'yes';
 
-const parseSplitTracks = (value: string): number => {
+const parseSplitTracks = (value: string) => {
   const splitTracks = Number(value);
 
   if (
