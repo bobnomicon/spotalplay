@@ -7,7 +7,16 @@ export interface Envs {
   spotifyScope: string;
 }
 
-export interface AccessToken {
+export interface SpotifyPage<TItem> {
+  items: TItem[];
+  limit: number;
+  next: string | null;
+  offset: number;
+  previous: string | null;
+  total: number;
+}
+
+export interface SpotifyAccessToken {
   access_token: string;
   token_type: string;
   scope: string;
@@ -15,42 +24,37 @@ export interface AccessToken {
   refresh_token?: string;
 }
 
-export interface TrackItem {
+export interface SpotifyTrack {
   id?: string;
   name: string;
-  uri: string;
+  uri: string | null;
 }
 
-export interface Track {
-  limit: number;
-  next?: string;
-  offset: number;
-  previous?: string;
-  total: number;
-  items: TrackItem[];
-}
-
-export interface AlbumItem {
+export interface SpotifyAlbum {
   id: string;
   name: string;
-  tracks?: Track;
 }
 
-export interface Album {
-  limit: number;
-  next?: string;
-  offset: number;
-  previous?: string;
-  total: number;
-  items: { album: AlbumItem }[];
+export interface SavedAlbumItem {
+  album: SpotifyAlbum;
 }
 
-export interface Playlist {
+export type SavedAlbumsPage = SpotifyPage<SavedAlbumItem>;
+export type AlbumTracksPage = SpotifyPage<SpotifyTrack>;
+
+export interface SpotifyPlaylist {
   id: string;
   name: string;
-  description: string;
-  public: boolean;
-  tracks: Track;
+  description: string | null;
+  public: boolean | null;
+}
+
+export interface AuthorizationCodeResponse {
+  code: string;
+}
+
+export interface ApiErrorResponse {
+  message: string;
 }
 
 export interface UserInput {

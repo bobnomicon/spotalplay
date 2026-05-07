@@ -1,4 +1,5 @@
-import type { Album, Track } from './types';
+import { fetchJson } from './api';
+import type { AlbumTracksPage, SavedAlbumsPage } from './types';
 import envs from './envs';
 
 /**
@@ -12,28 +13,22 @@ export const getAlbums = async (
   spotifyAccessToken: string,
   offset: number = 0,
   limit: number = 50
-) => {
+): Promise<SavedAlbumsPage> => {
   const queryParams = new URLSearchParams({
-    limit: limit.toString(),
-    offset: offset.toString()
-  }) as URLSearchParams;
+    limit: String(limit),
+    offset: String(offset)
+  });
 
-  const data = (await fetch(`${envs.spotifyApiUrl}/me/albums?${queryParams}`, {
-    method: 'GET',
-    headers: {
-      Authorization: `Bearer ${spotifyAccessToken}`
-    }
-  }).then(response => {
-    if (!response.ok) {
-      throw new Error(
-        `Error fetching albums: ${response.status} ${response.statusText}`
-      );
-    }
-
-    return response.json();
-  })) as Album;
-
-  return data;
+  return fetchJson<SavedAlbumsPage>(
+    `${envs.spotifyApiUrl}/me/albums?${queryParams}`,
+    {
+      method: 'GET',
+      headers: {
+        Authorization: `Bearer ${spotifyAccessToken}`
+      }
+    },
+    'Error fetching albums'
+  );
 };
 
 /**
@@ -49,29 +44,20 @@ export const getAlbumTracks = async (
   albumId: string,
   offset: number = 0,
   limit: number = 50
-) => {
+): Promise<AlbumTracksPage> => {
   const queryParams = new URLSearchParams({
-    limit: limit.toString(),
-    offset: offset.toString()
+    limit: String(limit),
+    offset: String(offset)
   });
 
-  const data = (await fetch(
+  return fetchJson<AlbumTracksPage>(
     `${envs.spotifyApiUrl}/albums/${albumId}/tracks?${queryParams}`,
     {
       method: 'GET',
       headers: {
         Authorization: `Bearer ${spotifyAccessToken}`
       }
-    }
-  ).then(response => {
-    if (!response.ok) {
-      throw new Error(
-        `Error fetching album tracks: ${response.status} ${response.statusText}`
-      );
-    }
-
-    return response.json();
-  })) as Track;
-
-  return data;
+    },
+    'Error fetching album tracks'
+  );
 };
